@@ -1,0 +1,322 @@
+<!DOCTYPE html><html lang="zh-TW" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AFL++: Combining Incremental Steps of Fuzzing Research | LJC's BLOG</title><meta name="keywords" content="papper notes"><meta name="author" content="LJC"><meta name="copyright" content="LJC"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="#ffffff"><meta name="description" content="作者：Andrea Fioraldi†, Dominik Maier‡, Heiko Eißfeldt, Marc Heuse§ 单位：†Sapienza University of Rome罗马大学, ‡TU Berlin柏林工业大学,§The Hacker’s Choice 会议：USENIX Workshop 2020 链接：https:&#x2F;&#x2F;www.usenix.org&#x2F;system&#x2F;fi">
+<meta property="og:type" content="article">
+<meta property="og:title" content="AFL++: Combining Incremental Steps of Fuzzing Research">
+<meta property="og:url" content="https://ljcppp.github.io/2021/05/15/AFL-Combining-Incremental-Steps-of-Fuzzing-Research/index.html">
+<meta property="og:site_name" content="LJC&#39;s BLOG">
+<meta property="og:description" content="作者：Andrea Fioraldi†, Dominik Maier‡, Heiko Eißfeldt, Marc Heuse§ 单位：†Sapienza University of Rome罗马大学, ‡TU Berlin柏林工业大学,§The Hacker’s Choice 会议：USENIX Workshop 2020 链接：https:&#x2F;&#x2F;www.usenix.org&#x2F;system&#x2F;fi">
+<meta property="og:locale" content="zh_TW">
+<meta property="og:image" content="https://ljcppp.github.io/img/Big_Sur_Simple.png">
+<meta property="article:published_time" content="2021-05-15T07:14:52.000Z">
+<meta property="article:modified_time" content="2021-06-09T07:16:59.374Z">
+<meta property="article:author" content="LJC">
+<meta property="article:tag" content="papper notes">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://ljcppp.github.io/img/Big_Sur_Simple.png"><link rel="shortcut icon" href="/img/favicon.ico"><link rel="canonical" href="https://ljcppp.github.io/2021/05/15/AFL-Combining-Incremental-Steps-of-Fuzzing-Research/"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free/css/all.min.css" media="print" onload="this.media='all'"><script>const GLOBAL_CONFIG = { 
+  root: '/',
+  algolia: undefined,
+  localSearch: undefined,
+  translate: undefined,
+  noticeOutdate: {"limitDay":365,"position":"top","messagePrev":"It has been","messageNext":"days since the last update, the content of the article may be outdated."},
+  highlight: {"plugin":"highlighjs","highlightCopy":true,"highlightLang":true},
+  copy: {
+    success: '複製成功',
+    error: '複製錯誤',
+    noSupport: '瀏覽器不支援'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  date_suffix: {
+    just: '剛剛',
+    min: '分鐘前',
+    hour: '小時前',
+    day: '天前',
+    month: '個月前'
+  },
+  copyright: {"limitCount":50,"languages":{"author":"作者: LJC","link":"連結: ","source":"來源: LJC's BLOG","info":"著作權歸作者所有。商業轉載請聯絡作者獲得授權，非商業轉載請註明出處。"}},
+  lightbox: 'fancybox',
+  Snackbar: undefined,
+  source: {
+    jQuery: 'https://cdn.jsdelivr.net/npm/jquery@latest/dist/jquery.min.js',
+    justifiedGallery: {
+      js: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/js/jquery.justifiedGallery.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/justifiedGallery/dist/css/justifiedGallery.min.css'
+    },
+    fancybox: {
+      js: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.js',
+      css: 'https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@latest/dist/jquery.fancybox.min.css'
+    }
+  },
+  isPhotoFigcaption: false,
+  islazyload: false,
+  isanchor: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = { 
+  isPost: true,
+  isHome: false,
+  isHighlightShrink: true,
+  isToc: true,
+  postUpdate: '2021-06-09 15:16:59'
+}</script><noscript><style type="text/css">
+  #nav {
+    opacity: 1
+  }
+  .justified-gallery img {
+    opacity: 1
+  }
+
+  #recent-posts time,
+  #post-meta time {
+    display: inline !important
+  }
+</style></noscript><script>(win=>{
+    win.saveToLocal = {
+      set: function setWithExpiry(key, value, ttl) {
+        if (ttl === 0) return
+        const now = new Date()
+        const expiryDay = ttl * 86400000
+        const item = {
+          value: value,
+          expiry: now.getTime() + expiryDay,
+        }
+        localStorage.setItem(key, JSON.stringify(item))
+      },
+
+      get: function getWithExpiry(key) {
+        const itemStr = localStorage.getItem(key)
+
+        if (!itemStr) {
+          return undefined
+        }
+        const item = JSON.parse(itemStr)
+        const now = new Date()
+
+        if (now.getTime() > item.expiry) {
+          localStorage.removeItem(key)
+          return undefined
+        }
+        return item.value
+      }
+    }
+  
+    win.getScript = url => new Promise((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = url
+      script.async = true
+      script.onerror = reject
+      script.onload = script.onreadystatechange = function() {
+        const loadState = this.readyState
+        if (loadState && loadState !== 'loaded' && loadState !== 'complete') return
+        script.onload = script.onreadystatechange = null
+        resolve()
+      }
+      document.head.appendChild(script)
+    })
+  
+      win.activateDarkMode = function () {
+        document.documentElement.setAttribute('data-theme', 'dark')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0d0d0d')
+        }
+      }
+      win.activateLightMode = function () {
+        document.documentElement.setAttribute('data-theme', 'light')
+        if (document.querySelector('meta[name="theme-color"]') !== null) {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff')
+        }
+      }
+      const t = saveToLocal.get('theme')
+    
+          if (t === 'dark') activateDarkMode()
+          else if (t === 'light') activateLightMode()
+        
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        if (asideStatus === 'hide') {
+          document.documentElement.classList.add('hide-aside')
+        } else {
+          document.documentElement.classList.remove('hide-aside')
+        }
+      }
+    })(window)</script><meta name="generator" content="Hexo 5.4.0"></head><body><div id="loading-box"><div class="loading-left-bg"></div><div class="loading-right-bg"></div><div class="spinner-box"><div class="configure-border-1"><div class="configure-core"></div></div><div class="configure-border-2"><div class="configure-core"></div></div><div class="loading-word">載入中...</div></div></div><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="author-avatar"><img class="avatar-img" src="/img/avatar.jpg" onerror="onerror=null;src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data"><div class="data-item is-center"><div class="data-item-link"><a href="/archives/"><div class="headline">文章</div><div class="length-num">7</div></a></div></div><div class="data-item is-center"><div class="data-item-link"><a href="/tags/"><div class="headline">標籤</div><div class="length-num">5</div></a></div></div></div><hr/><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> Link</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url('/img/Big_Sur_Simple.png')"><nav id="nav"><span id="blog_name"><a id="site-name" href="/">LJC's BLOG</a></span><div id="menus"><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> Home</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> Archives</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> Tags</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> Categories</span></a></div><div class="menus_item"><a class="site-page" href="/link/"><i class="fa-fw fas fa-link"></i><span> Link</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-heart"></i><span> About</span></a></div></div><div id="toggle-menu"><a class="site-page"><i class="fas fa-bars fa-fw"></i></a></div></div></nav><div id="post-info"><h1 class="post-title">AFL++: Combining Incremental Steps of Fuzzing Research</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">發表於</span><time class="post-meta-date-created" datetime="2021-05-15T07:14:52.000Z" title="發表於 2021-05-15 15:14:52">2021-05-15</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新於</span><time class="post-meta-date-updated" datetime="2021-06-09T07:16:59.374Z" title="更新於 2021-06-09 15:16:59">2021-06-09</time></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-pv-cv"><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">閱讀量:</span><span id="busuanzi_value_page_pv"></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="post-content" id="article-container"><blockquote>
+<p>作者：Andrea Fioraldi†, Dominik Maier‡, Heiko Eißfeldt, Marc Heuse§</p>
+<p>单位：†Sapienza University of Rome罗马大学, ‡TU Berlin柏林工业大学,§The Hacker’s Choice</p>
+<p>会议：USENIX Workshop 2020</p>
+<p>链接：<a target="_blank" rel="noopener" href="https://www.usenix.org/system/files/woot20-paper-fioraldi.pdf">https://www.usenix.org/system/files/woot20-paper-fioraldi.pdf</a></p>
+</blockquote>
+<h2 id="Introduction">Introduction</h2>
+<p>近年来，模糊测试在信息安全领域引发了广泛关注，并促进了各个领域的进步。 在 Shoshitaishvili 等人进行的测试中，符号辅助的模糊测试识别出的漏洞几乎是符号执行的三倍。</p>
+<p>AFL是最具盛名的fuzzing工具，基于AFL的研究也层出不穷，但这些技术往往是正交式、独立地发展。</p>
+<p>因此：</p>
+<ol>
+<li>将这些前沿新颖的fuzzing技术结合起来是一件很困难的事情</li>
+<li>而评估这些不同维度的fuzzing技术也是一件很困难的事</li>
+</ol>
+<p>本文提出了一个新的fuzzing框架 AFL++解决上面的问题。</p>
+<ol>
+<li>AFL++提供了一个可用的fuzzing工具，结合了许多前沿fuzzing技术</li>
+<li>AFL++还提供了一种新颖的可自定义的变异API（Custom Mutator API），研究人员能够轻松将自己设计的Mutator应用到AFL++上，或和其他Mutators结合起来。</li>
+<li>这篇论文还评估了许多结合起来的fuzzing技术组合，评估结果体现了fuzzing技术的target-dependency.</li>
+</ol>
+<h2 id="2-State-of-the-Art">2 State-of-the-Art</h2>
+<p>解释一些和AFL相关的概念和近些年研究。</p>
+<h3 id="2-1-American-Fuzzy-Lop">2.1 American Fuzzy Lop</h3>
+<p>AFL是一种基于覆盖率反馈（coverage- guided）的fuzz工具。</p>
+<p>AFL的工作流程如下：</p>
+<ol>
+<li>编译时对源码进行插桩，以记录代码覆盖率（Code Coverage）</li>
+<li>初始化一些输入文件，加入到输入队列（queue）</li>
+<li>在队列中按照一定策略选择种子（seed），并进行大量的突变（mutation），得到大量的变异文件</li>
+<li>如果该变异文件触发了新的执行路径，则将其保存下来，加入到队列中。</li>
+<li>goto 2</li>
+</ol>
+<p>上述过程会一直进行下去，其中触发的crash会被记录下来，以便后面分析程序漏洞。</p>
+<p><img src="https://i.loli.net/2021/04/19/FXi5zYwlkDJ38W2.png" alt="image-20210419163141467"></p>
+<h4 id="2-1-1-Coverage-Guided-Feedback">2.1.1 Coverage Guided Feedback</h4>
+<p>AFL的覆盖反馈是一种混合度量，它将边覆盖与每条边在一次运行中被执行的次数相结合。如果一个输入探索了至少一个新的边，那么它就被认为是有意义的(即，保存到队列中)。</p>
+<p>对于队列中的每个测试用例，AFL还试图减小测试用例的大小并提高目标的速度，同时在修剪时保持完整的覆盖。</p>
+<h4 id="2-1-2-Mutation">2.1.2 Mutation</h4>
+<p>AFL中的Mutation主要分为两种，一种是<strong>deterministic stage</strong>，确定性突变是测试用例内容上的单一确定性突变，如位翻转、加法等；另一种是<strong>havoc stage</strong>，突变是随机堆叠的，包括对测试用例大小的更改。</p>
+<h4 id="2-1-3-Forkserver">2.1.3 Forkserver</h4>
+<p>为了避免<code>execve()</code>的开销，AFL使用所谓的forkserver。Fuzzer通过进程间通信机制，向目标注入forkserver。如下图所示。</p>
+<p><img src="https://i.loli.net/2021/04/20/THknsmtyGepd4K7.png" alt="image-20210420132958275"></p>
+<p>当fuzzer在执行目标程序前，会先执行fork()命令，得到一个子进程。</p>
+<p>子进程再通过execve()指令执行目标程序，而execve()命令有一个很特别的地方，他会用这个目标程序的映像覆盖掉子进程的映像。</p>
+<p>因此，此时的fuzzer fork()出的子进程就变成了插过桩的目标程序，也就是forkserver。</p>
+<p>当fuzzer想要执行目标程序时，就和forkserver通信，将fork目标程序的任务交给forkserver，这样就极大的提高了fuzzer的执行效率。</p>
+<h4 id="2-1-4-Persistent-Mode">2.1.4 Persistent Mode</h4>
+<p>持久模式极大地提高了性能，因为目标不会fork每个测试用例。一般是对程序patch一个循环，然后每次迭代中执行一个测试用例。极大减少了fork的开销。</p>
+<h3 id="2-2-Smart-Scheduling">2.2 Smart Scheduling</h3>
+<p>Schedulers的目标是通过智能的测试用例选择来提高总体覆盖率和错误检测。</p>
+<h4 id="2-2-1-AFLFast">2.2.1 AFLFast</h4>
+<p>AFLFast主要是从种子调度的方向改进AFL。</p>
+<p>AFLFast观察到种子大多数生成的输入都经历了相同的高频路径，因此想要设计一些策略能够focus on一些低频路径。</p>
+<p>他们主要关注两个问题：</p>
+<ol>
+<li>为了强调低频路径，fuzzer应该按什么顺序挑选种子？</li>
+<li>我们能调整每个种子产生的输入，即可以生成多少变异文件（energy）吗？</li>
+</ol>
+<p>作者通过一组新的搜索策略来解决第一个问题。通过引入六种功率计划，并根据模糊过程中收集的参数来计算能量解决第二个问题。</p>
+<h4 id="2-2-2-MOpt">2.2.2 MOpt</h4>
+<p>MOpt是从变异调度的角度提升fuzz的效率。MOpt使用粒子群优化算法来对问题建模，这种算法提高了fuzzer快速发现覆盖的能力。</p>
+<p>在MOpt的工作流程中，主要有两个核心模块。一个是Pilot模块，另一个是Core模块。</p>
+<p>Pilot模块：评估每一个粒子群，也就是该mutations的概率分布的fuzz效率。</p>
+<p>Core模块：使用Pilot模块评估出的效率最高的mutation策略 来fuzz。</p>
+<h3 id="2-3-Bypassing-Roadblocks">2.3 Bypassing Roadblocks</h3>
+<p>覆盖引导的fuzzer有时候会遇到一些阻碍其探索的障碍，比如字符串比较和校验和。</p>
+<h4 id="2-3-1-LAF-Intel">2.3.1 LAF-Intel</h4>
+<p>LAF- Intel的思路是，把这些比较难的、比较一连串字符的比较划分为多个单字节的比较。这样可以让程序块的划分粒度更细，当你每匹配到一个字节时，就被认为是interesting，被保存到队列中，以后可以继续fuzz，这样，fuzzer就可以一步一步的解决这个roadblock。</p>
+<p>具体来说，LAF-Intel：</p>
+<ol>
+<li>将&gt;=(和&lt;=)运算符简化为&gt;(&lt;)和==比较链</li>
+<li>将有符号整数比较链改为仅符号比较链和无符号比较链</li>
+<li>将所有位宽为64位、32位和16位的无符号整数比较链拆分为8位多重比较链</li>
+</ol>
+<h4 id="2-3-2-RedQueen">2.3.2 RedQueen</h4>
+<ol>
+<li>
+<p>对输入进行染色</p>
+</li>
+<li>
+<p>根据指定条件，识别这些像checksum比较的指令，hook住。</p>
+</li>
+<li>
+<p>然后就用<code>cmp al, al</code> patch原程序，这样就让这些checksum的判断一定为正。</p>
+<p><img src="https://z3.ax1x.com/2021/04/09/cNjq4U.png" alt="cNjq4U.png"></p>
+<p>但这样的patch就会带来false positive，即这些输入的执行路径可能并不是这样的。</p>
+</li>
+<li>
+<p>RedQueen就会在之后进行输入验证，并修复他们。</p>
+</li>
+<li>
+<p>在fix阶段，其实就是用magic bytes的方法，对checksum的位置进行</p>
+</li>
+</ol>
+<h3 id="2-4-Mutate-Structured-Inputs">2.4 Mutate Structured Inputs</h3>
+<p>Fuzzer的常见问题是，可能会生成大部分无效输入。一种方案是使用输入模型，从而有效减少生成的输入空间。</p>
+<h4 id="2-4-1-AFLSmart">2.4.1 AFLSmart</h4>
+<p>AFLSmart将AFL和Peach结合起来，AFLSmart的输入为Peach pits格式，一种xml文件。</p>
+<p>AFLSmart 将种子都表示为Peach pits格式，这样，就可以基于这些块进行变异，而不需要基于比特级的 变异。</p>
+<h2 id="3-A-New-Baseline-for-Fuzzing">3 A New Baseline for Fuzzing</h2>
+<p>AFL++就将上述提到的诸多fuzzing技术都结合在一起，并提供了一种可供扩展的API。</p>
+<h3 id="3-1-Seed-Scheduling">3.1 Seed Scheduling</h3>
+<p>AFL++的Seed Scheduling就是基于AFLFast的种子调度。</p>
+<p>AFL++的Power Schedules除了AFLFast提到的6种，还有另外两种，Mmopt和Rare。</p>
+<p>Mmopt主要关注那些最新发现的种子</p>
+<p>而Rare主要关注那些具有罕见边的种子。</p>
+<h3 id="3-2-Mutators">3.2 Mutators</h3>
+<h4 id="3-2-1-Custom-Mutator-API">3.2.1 Custom Mutator API</h4>
+<p>自定义变异器允许模糊研究在AFL++之上构建新的调度、突变和最小化，而不需要像目前的许多工具那样派生和修补AFL。例如，使用当前的API，AFLSMART可以完全重写为AFL++插件。</p>
+<p>除了自定义变异API，AFL++还提供了自定义剪枝API，但是可能破坏复杂格式的结构。</p>
+<h4 id="3-2-2-Input-To-State-Mutator">3.2.2 Input-To-State Mutator</h4>
+<p>AFL++实现了一个基于RedQueen的Input-To-State(I2S)替换的突变器，并进行了一些优化。</p>
+<p>首先扩展了染色的方法。RedQueen在染色时是保持程序执行路径不变，即hash of bitmap不变。而AFL++除了保持程序的执行路径不变，还对程序的执行时间做了一定控制，规定了程序的执行时间下界为2x slowdown。</p>
+<p>另一个扩展是概率fuzzing。如果fuzzer无法生成能绕过比较的输入，那么在下一次就会以较小的概率尝试绕过，防止在无法解决的比较上浪费太多时间。</p>
+<p><strong>比较日志表格化</strong> RedQueen中采用的是虚拟机断点hook的cmp指令，当断点被hit时，再提取指令操作数。而AFL++则是使用的一种共享表，每一个指令都记录他的前256次执行的操作数。</p>
+<h4 id="3-2-3-MOpt-Mutator">3.2.3 MOpt Mutator</h4>
+<p>AFL++中也缝合了MOpt的Pilot和Core模块。并且可以和Input-to-State结合。</p>
+<h3 id="3-3-Instrumentations">3.3 Instrumentations</h3>
+<p>Afl++支持几种插桩后端：LLVM、GCC、QEMU、Unicorn和QBDI。如表一所示，是对第三节中讨论的功能的实现状态。</p>
+<p><img src="https://i.loli.net/2021/04/20/p43RiIknfS7wuma.png" alt="image-20210420201439867"></p>
+<p>在插桩上，AFL++还解决了边hit count溢出的问题。因为在AFL中，边只会记录到255。</p>
+<p>作者提供了两种方法解决这个问题：</p>
+<ol>
+<li>NeverZero，加一个进位标志。NeverZero可以提高fuzzer的表现性能。</li>
+<li>Saturated Counters：当计数超过255时，就停在255。这个做法，不推荐，反而会让fuzzer的性能变差。</li>
+</ol>
+<h2 id="4-Evaluation-Use-Cases">4 Evaluation Use Cases</h2>
+<p>作者选取了如下六种AFL++配置，并利用FuzzBench来评估性能。</p>
+<p>FuzzBench为所有感兴趣的项目提供固定的21个目标的模糊评估，作者根据他们的特征从21个中挑选了9个显示出不同的行为的目标。</p>
+<ol>
+<li><strong>Default</strong> : AFL with some fixes</li>
+<li><strong>MOpt</strong>: 3.2.3提到的有效的突变器</li>
+<li><strong>Ngram4</strong>: 另一种工具，将4个基本块解释为唯一路径。</li>
+<li><strong>RedQueen</strong>: Fuzzer的另一个反馈通道，可以到达更深的深度。</li>
+<li><strong>Ngram4, Rare</strong>: Ngram4 和 Rare Schedule 组合。</li>
+<li><strong>MOpt, RedQueen</strong> MOpt mutation 和 RedQueen 组合</li>
+</ol>
+<p>利用上述六组组合，作者尝试证明：</p>
+<ul>
+<li>把MOpt和Ngram4当成可能的技术实例，那么把他们组合起来能产生有用的效果。</li>
+<li>在运行期间，所有的fuzzing行为都是针对特定行为的，因此选择合适的配置非常重要。</li>
+</ul>
+<p><strong>RedQueen</strong> 如下图g所示，RedQueen能绕过其他配置不能绕过的roadblocks，由于I2S替换。在这种情况下，MOpt变异有助于进一步增加覆盖范围。</p>
+<p><strong>MOpt</strong> MOpt要么很成功，要么很失败。比如图h，MOpt突然开始找到大量的新覆盖，并且性能远远超过其他任何配置。</p>
+<p>在目标是harfbuzz时，RedQueen 和 MOpt 的组合取得了明显的效果，如图e所示，RedQueen保证探索深度，MOPT增加了postive的结果。</p>
+<p>在目标是 libjpeg-turbo 时，MOpt对RedQueen的行为有较高的影响，如图d所示。</p>
+<p>但是，在目标是 lcms 时，RedQueen的积极效果和MOpt的消极效果抵消了。</p>
+<p><strong>Ngram</strong> Ngram也是一种可能到达更深层次的有效方法。如图i和c所示，其中目标是libxml2时，MOpt和RedQueen的表现都不佳，而Ngram效果出色。但是也和其他配置一样Ngram也有表现比默认配置跟差的时候。</p>
+<p><img src="https://i.loli.net/2021/04/21/JnhMv7ImLTzfNqu.png" alt="image-20210421102430579"></p>
+<h3 id="4-1-AFL-Optimal">4.1 AFL++ Optimal</h3>
+<p>基于上述评估，作者又对配置进行了微调，被称为AFL++ Optimal。并对21个可用目标中的13个手工制作并启用了AFL ++ Optimal。 这样，每个目标的最高中值覆盖率的百分比平均提高了7％，AFL ++ Optimal通常优于FuzzBench3上的所有其他模糊测试。</p>
+<h2 id="5-Future-Work">5 Future Work</h2>
+<p>尽管AFL ++项目在过去的一年中取得了良好的进展，但仍有更大的研究和工程问题需要解决。</p>
+<h3 id="5-1-Scaling">5.1 Scaling</h3>
+<p>AFL++对于多线程的扩展还不够理想，并且有些依赖fork的syscall，所以大部分时间花在了内核上，所以下一步是多线程支持降低开销。</p>
+<h3 id="5-2-Collision-Free-instrumentation">5.2 Collision-Free instrumentation</h3>
+<p>AFL提供的原始工具以一种可能发生冲突的方式散列当前跳转的起始地址和目标地址。这被认为是速度和准确性之间的折衷。</p>
+<h3 id="5-3-Static-Analysis-for-Optimal-Fuzz-Settings">5.3 Static Analysis for Optimal Fuzz Settings</h3>
+<p>Fuzzing的最佳方案很大程度上取决于目标，所以未来的工作可以通过对目标的静态分析找到一个可能最优的选项，比如大量的 strcmp 可能是适合RedQueen的迹象。</p>
+<h3 id="5-4-Plug-in-System">5.4 Plug-in System</h3>
+<p>尽管Custom Mutator已经为研究人员提供了很大的灵活性，但目标是添加额外的插件功能，以替换或添加构建块(如调度器、执行器和队列)的功能。</p>
+<h2 id="6-Conclusion">6 Conclusion</h2>
+<p>AFL++试图集成最近许多主要的模糊研究，这在当前的AFL++体系结构中是可行的。</p>
+<p>在测试后，作者发现提出的Fuzzing优化都只能针对特定目标，而对其他目标的效果可能不大理想。</p>
+<p>最重要的是，AFL++弥合了学术界和行业之间的鸿沟，以易于使用的方式向所有人提供学术进步。</p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta">文章作者: </span><span class="post-copyright-info"><a href="mailto:undefined">LJC</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta">文章連結: </span><span class="post-copyright-info"><a href="https://ljcppp.github.io/2021/05/15/AFL-Combining-Incremental-Steps-of-Fuzzing-Research/">https://ljcppp.github.io/2021/05/15/AFL-Combining-Incremental-Steps-of-Fuzzing-Research/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta">版權聲明: </span><span class="post-copyright-info">本部落格所有文章除特別聲明外，均採用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 許可協議。轉載請註明來自 <a href="https://ljcppp.github.io" target="_blank">LJC's BLOG</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/papper-notes/">papper notes</a></div><div class="post_share"><div class="social-share" data-image="/img/Big_Sur_Simple.png" data-sites="facebook,twitter,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/social-share.js/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/social-share.js/dist/js/social-share.min.js" defer></script></div></div><div class="post-reward"><div class="reward-button button--animated"><i class="fas fa-qrcode"></i> 打賞</div><div class="reward-main"><ul class="reward-all"><li class="reward-item"><a href="/img/alipay.jpg" target="_blank"><img class="post-qr-code-img" src="/img/alipay.jpg" alt="支付寶"/></a><div class="post-qr-code-desc">支付寶</div></li></ul></div></div><nav class="pagination-post" id="pagination"><div class="next-post pull-full"><a href="/2021/04/21/Writeup%20for%20plaidCTF/"><img class="next-cover" src="/img/Big_Sur_Simple.png" onerror="onerror=null;src='/img/404.jpg'" alt="cover of next post"><div class="pagination-info"><div class="label">下一篇</div><div class="next_info">Writeup for plaidCTF</div></div></a></div></nav></div><div class="aside-content" id="aside-content"><div class="card-widget card-info"><div class="card-info-avatar is-center"><img class="avatar-img" src="/img/avatar.jpg" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/><div class="author-info__name">LJC</div><div class="author-info__description">自闭失败小学生🤡</div></div><div class="card-info-data"><div class="card-info-data-item is-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">7</div></a></div><div class="card-info-data-item is-center"><a href="/tags/"><div class="headline">標籤</div><div class="length-num">5</div></a></div></div><a class="button--animated" id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/ljcppp"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons is-center"><a class="social-icon" href="https://github.com/ljcppp" target="_blank" title="Github"><i class="fab fa-github"></i></a><a class="social-icon" href="/ljcppp@qq.com" target="_blank" title="Email"><i class="fas fa-envelope"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn card-announcement-animation"></i><span>公告</span></div><div class="announcement_content">好 饿 啊</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目錄</span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Introduction"><span class="toc-number">1.</span> <span class="toc-text">Introduction</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-State-of-the-Art"><span class="toc-number">2.</span> <span class="toc-text">2 State-of-the-Art</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-American-Fuzzy-Lop"><span class="toc-number">2.1.</span> <span class="toc-text">2.1 American Fuzzy Lop</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#2-1-1-Coverage-Guided-Feedback"><span class="toc-number">2.1.1.</span> <span class="toc-text">2.1.1 Coverage Guided Feedback</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-1-2-Mutation"><span class="toc-number">2.1.2.</span> <span class="toc-text">2.1.2 Mutation</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-1-3-Forkserver"><span class="toc-number">2.1.3.</span> <span class="toc-text">2.1.3 Forkserver</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-1-4-Persistent-Mode"><span class="toc-number">2.1.4.</span> <span class="toc-text">2.1.4 Persistent Mode</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-Smart-Scheduling"><span class="toc-number">2.2.</span> <span class="toc-text">2.2 Smart Scheduling</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#2-2-1-AFLFast"><span class="toc-number">2.2.1.</span> <span class="toc-text">2.2.1 AFLFast</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-2-2-MOpt"><span class="toc-number">2.2.2.</span> <span class="toc-text">2.2.2 MOpt</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-Bypassing-Roadblocks"><span class="toc-number">2.3.</span> <span class="toc-text">2.3 Bypassing Roadblocks</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#2-3-1-LAF-Intel"><span class="toc-number">2.3.1.</span> <span class="toc-text">2.3.1 LAF-Intel</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-3-2-RedQueen"><span class="toc-number">2.3.2.</span> <span class="toc-text">2.3.2 RedQueen</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-4-Mutate-Structured-Inputs"><span class="toc-number">2.4.</span> <span class="toc-text">2.4 Mutate Structured Inputs</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#2-4-1-AFLSmart"><span class="toc-number">2.4.1.</span> <span class="toc-text">2.4.1 AFLSmart</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-A-New-Baseline-for-Fuzzing"><span class="toc-number">3.</span> <span class="toc-text">3 A New Baseline for Fuzzing</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-Seed-Scheduling"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 Seed Scheduling</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-Mutators"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 Mutators</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#3-2-1-Custom-Mutator-API"><span class="toc-number">3.2.1.</span> <span class="toc-text">3.2.1 Custom Mutator API</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-2-2-Input-To-State-Mutator"><span class="toc-number">3.2.2.</span> <span class="toc-text">3.2.2 Input-To-State Mutator</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-2-3-MOpt-Mutator"><span class="toc-number">3.2.3.</span> <span class="toc-text">3.2.3 MOpt Mutator</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-Instrumentations"><span class="toc-number">3.3.</span> <span class="toc-text">3.3 Instrumentations</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-Evaluation-Use-Cases"><span class="toc-number">4.</span> <span class="toc-text">4 Evaluation Use Cases</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-AFL-Optimal"><span class="toc-number">4.1.</span> <span class="toc-text">4.1 AFL++ Optimal</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-Future-Work"><span class="toc-number">5.</span> <span class="toc-text">5 Future Work</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-Scaling"><span class="toc-number">5.1.</span> <span class="toc-text">5.1 Scaling</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-Collision-Free-instrumentation"><span class="toc-number">5.2.</span> <span class="toc-text">5.2 Collision-Free instrumentation</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-Static-Analysis-for-Optimal-Fuzz-Settings"><span class="toc-number">5.3.</span> <span class="toc-text">5.3 Static Analysis for Optimal Fuzz Settings</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-4-Plug-in-System"><span class="toc-number">5.4.</span> <span class="toc-text">5.4 Plug-in System</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#6-Conclusion"><span class="toc-number">6.</span> <span class="toc-text">6 Conclusion</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item"><a class="thumbnail" href="/2021/05/15/AFL-Combining-Incremental-Steps-of-Fuzzing-Research/" title="AFL++: Combining Incremental Steps of Fuzzing Research"><img src="/img/Big_Sur_Simple.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="AFL++: Combining Incremental Steps of Fuzzing Research"/></a><div class="content"><a class="title" href="/2021/05/15/AFL-Combining-Incremental-Steps-of-Fuzzing-Research/" title="AFL++: Combining Incremental Steps of Fuzzing Research">AFL++: Combining Incremental Steps of Fuzzing Research</a><time datetime="2021-05-15T07:14:52.000Z" title="發表於 2021-05-15 15:14:52">2021-05-15</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2021/04/21/Writeup%20for%20plaidCTF/" title="Writeup for plaidCTF"><img src="/img/Big_Sur_Simple.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Writeup for plaidCTF"/></a><div class="content"><a class="title" href="/2021/04/21/Writeup%20for%20plaidCTF/" title="Writeup for plaidCTF">Writeup for plaidCTF</a><time datetime="2021-04-21T05:12:27.000Z" title="發表於 2021-04-21 13:12:27">2021-04-21</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2021/04/11/Learning%20FRIDA%20with%20Examples/" title="Learning FRIDA with Examples"><img src="/img/Big_Sur_Simple.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Learning FRIDA with Examples"/></a><div class="content"><a class="title" href="/2021/04/11/Learning%20FRIDA%20with%20Examples/" title="Learning FRIDA with Examples">Learning FRIDA with Examples</a><time datetime="2021-04-11T09:08:37.000Z" title="發表於 2021-04-11 17:08:37">2021-04-11</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2021/03/25/Learning%20Angr%20with%20Examples/" title="Learning Angr with Examples"><img src="/img/Big_Sur_Simple.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Learning Angr with Examples"/></a><div class="content"><a class="title" href="/2021/03/25/Learning%20Angr%20with%20Examples/" title="Learning Angr with Examples">Learning Angr with Examples</a><time datetime="2021-03-25T06:06:52.000Z" title="發表於 2021-03-25 14:06:52">2021-03-25</time></div></div><div class="aside-list-item"><a class="thumbnail" href="/2021/03/16/Writeup%20for%20v&amp;n_D%5E3%20CTF/" title="Writeup for v&amp;n_D^3 CTF"><img src="/img/Big_Sur_Simple.png" onerror="this.onerror=null;this.src='/img/404.jpg'" alt="Writeup for v&amp;n_D^3 CTF"/></a><div class="content"><a class="title" href="/2021/03/16/Writeup%20for%20v&amp;n_D%5E3%20CTF/" title="Writeup for v&amp;n_D^3 CTF">Writeup for v&amp;n_D^3 CTF</a><time datetime="2021-03-16T07:18:29.000Z" title="發表於 2021-03-16 15:18:29">2021-03-16</time></div></div></div></div></div></div></main><footer id="footer"><div id="footer-wrap"><div class="copyright">&copy;2020 - 2021 By LJC</div><div class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo</a><span class="footer-separator">|</span><span>主題 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly</a></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="閱讀模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="淺色和深色模式轉換"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="單欄和雙欄切換"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside_config" type="button" title="設定"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目錄"><i class="fas fa-list-ul"></i></button><button id="go-up" type="button" title="回到頂部"><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js"></script><script src="/js/main.js"></script><script>var preloader = {
+  endLoading: () => {
+    document.body.style.overflow = 'auto';
+    document.getElementById('loading-box').classList.add("loaded")
+  },
+  initLoading: () => {
+    document.body.style.overflow = '';
+    document.getElementById('loading-box').classList.remove("loaded")
+
+  }
+}
+window.addEventListener('load',preloader.endLoading())</script><div class="js-pjax"><link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/katex@latest/dist/katex.min.css"><script src="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.js"></script><link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.css"><script>(() => {
+  document.querySelectorAll('#article-container span.katex-display').forEach(item => {
+    btf.wrap(item, 'div', '', 'katex-wrap')
+  })
+})()</script></div><script defer="defer" id="ribbon" src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1/dist/canvas-ribbon.min.js" size="150" alpha="0.6" zIndex="-1" mobile="false" data-click="true"></script><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script></div></body></html>
